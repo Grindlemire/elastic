@@ -14,6 +14,24 @@ import (
 	"github.com/olivere/elastic/uritemplates"
 )
 
+// IBulkService is an interface wrapping the BulkService to allow for better
+// testing.
+type IBulkService interface {
+	Add(requests ...BulkableRequest) IBulkService
+	Do(ctx context.Context) (*BulkResponse, error)
+	EstimatedSizeInBytes() int64
+	Index(index string) IBulkService
+	NumberOfActions() int
+	Pipeline(pipeline string) IBulkService
+	Pretty(pretty bool) IBulkService
+	Refresh(refresh string) IBulkService
+	Retrier(retrier Retrier) IBulkService
+	Routing(routing string) IBulkService
+	Timeout(timeout string) IBulkService
+	Type(typ string) IBulkService
+	WaitForActiveShards(waitForActiveShards string) IBulkService
+}
+
 // BulkService allows for batching bulk requests and sending them to
 // Elasticsearch in one roundtrip. Use the Add method with BulkIndexRequest,
 // BulkUpdateRequest, and BulkDeleteRequest to add bulk requests to a batch,
@@ -45,7 +63,7 @@ type BulkService struct {
 }
 
 // NewBulkService initializes a new BulkService.
-func NewBulkService(client *Client) *BulkService {
+func NewBulkService(client *Client) IBulkService {
 	builder := &BulkService{
 		client: client,
 	}
@@ -60,21 +78,21 @@ func (s *BulkService) reset() {
 
 // Retrier allows to set specific retry logic for this BulkService.
 // If not specified, it will use the client's default retrier.
-func (s *BulkService) Retrier(retrier Retrier) *BulkService {
+func (s *BulkService) Retrier(retrier Retrier) IBulkService {
 	s.retrier = retrier
 	return s
 }
 
 // Index specifies the index to use for all batches. You may also leave
 // this blank and specify the index in the individual bulk requests.
-func (s *BulkService) Index(index string) *BulkService {
+func (s *BulkService) Index(index string) IBulkService {
 	s.index = index
 	return s
 }
 
 // Type specifies the type to use for all batches. You may also leave
 // this blank and specify the type in the individual bulk requests.
-func (s *BulkService) Type(typ string) *BulkService {
+func (s *BulkService) Type(typ string) IBulkService {
 	s.typ = typ
 	return s
 }
@@ -82,7 +100,7 @@ func (s *BulkService) Type(typ string) *BulkService {
 // Timeout is a global timeout for processing bulk requests. This is a
 // server-side timeout, i.e. it tells Elasticsearch the time after which
 // it should stop processing.
-func (s *BulkService) Timeout(timeout string) *BulkService {
+func (s *BulkService) Timeout(timeout string) IBulkService {
 	s.timeout = timeout
 	return s
 }
@@ -92,19 +110,19 @@ func (s *BulkService) Timeout(timeout string) *BulkService {
 // primary and replica shards immediately), "wait_for" (wait for the
 // changes to be made visible by a refresh before applying), or "false"
 // (no refresh related actions).
-func (s *BulkService) Refresh(refresh string) *BulkService {
+func (s *BulkService) Refresh(refresh string) IBulkService {
 	s.refresh = refresh
 	return s
 }
 
 // Routing specifies the routing value.
-func (s *BulkService) Routing(routing string) *BulkService {
+func (s *BulkService) Routing(routing string) IBulkService {
 	s.routing = routing
 	return s
 }
 
 // Pipeline specifies the pipeline id to preprocess incoming documents with.
-func (s *BulkService) Pipeline(pipeline string) *BulkService {
+func (s *BulkService) Pipeline(pipeline string) IBulkService {
 	s.pipeline = pipeline
 	return s
 }
@@ -114,20 +132,20 @@ func (s *BulkService) Pipeline(pipeline string) *BulkService {
 // primary shard only. Set to `all` for all shard copies, otherwise set to
 // any non-negative value less than or equal to the total number of copies
 // for the shard (number of replicas + 1).
-func (s *BulkService) WaitForActiveShards(waitForActiveShards string) *BulkService {
+func (s *BulkService) WaitForActiveShards(waitForActiveShards string) IBulkService {
 	s.waitForActiveShards = waitForActiveShards
 	return s
 }
 
 // Pretty tells Elasticsearch whether to return a formatted JSON response.
-func (s *BulkService) Pretty(pretty bool) *BulkService {
+func (s *BulkService) Pretty(pretty bool) IBulkService {
 	s.pretty = pretty
 	return s
 }
 
 // Add adds bulkable requests, i.e. BulkIndexRequest, BulkUpdateRequest,
 // and/or BulkDeleteRequest.
-func (s *BulkService) Add(requests ...BulkableRequest) *BulkService {
+func (s *BulkService) Add(requests ...BulkableRequest) IBulkService {
 	for _, r := range requests {
 		s.requests = append(s.requests, r)
 	}
